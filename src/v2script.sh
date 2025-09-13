@@ -548,10 +548,10 @@ get_trojan() {
     colorEcho ${BLUE} "trojan-go is not installed. start installation"
 
     colorEcho ${BLUE} "Getting the latest version of trojan-go"
-    #local latest_version="$(curl -s "https://api.github.com/repos/p4gefau1t/trojan-go/releases" | jq '.[0].tag_name' --raw-output)"
-    latest_version="v0.8.2"
+    #local latest_version="$(curl -s "https://api.github.com/repos/jabberwocky238/trojan-go/releases" | jq '.[0].tag_name' --raw-output)"
+    latest_version="v20250913062436"
     echo "${latest_version}"
-    local trojango_link="https://github.com/p4gefau1t/trojan-go/releases/download/${latest_version}/trojan-go-linux-amd64.zip"
+    local trojango_link="https://github.com/jabberwocky238/trojan-go/releases/download/${latest_version}/trojan-go-linux-amd64.zip"
 
     ${sudoCmd} mkdir -p "/etc/trojan-go"
     #${sudoCmd} mkdir -p "/etc/ssl/trojan-go"
@@ -575,9 +575,9 @@ get_trojan() {
     colorEcho ${GREEN} "trojan-go is installed."
   else
     colorEcho ${BLUE} "Getting the latest version of trojan-go"
-    local latest_version="$(curl -s "https://api.github.com/repos/p4gefau1t/trojan-go/releases" | jq '.[0].tag_name' --raw-output)"
+    local latest_version="$(curl -s "https://api.github.com/repos/jabberwocky238/trojan-go/releases" | jq '.[0].tag_name' --raw-output)"
     echo "${latest_version}"
-    local trojango_link="https://github.com/p4gefau1t/trojan-go/releases/download/${latest_version}/trojan-go-linux-amd64.zip"
+    local trojango_link="https://github.com/jabberwocky238/trojan-go/releases/download/${latest_version}/trojan-go-linux-amd64.zip"
 
     cd $(mktemp -d)
     wget -nv "${trojango_link}" -O trojan-go.zip
