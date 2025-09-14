@@ -549,12 +549,12 @@ get_trojan() {
 
     colorEcho ${BLUE} "Getting the latest version of trojan-go"
     #local latest_version="$(curl -s "https://api.github.com/repos/jabberwocky238/trojan-go/releases" | jq '.[0].tag_name' --raw-output)"
-    latest_version="v20250913065048"
+    latest_version="v20250914000046"
     echo "${latest_version}"
     local trojango_link="https://github.com/jabberwocky238/trojan-go/releases/download/${latest_version}/trojan-go-linux-amd64.zip"
 
     ${sudoCmd} mkdir -p "/etc/trojan-go"
-    #${sudoCmd} mkdir -p "/etc/ssl/trojan-go"
+    #${sudoCmd} mkdir -p "/etc/ssl/trojan--go"
 
     cd $(mktemp -d)
     wget -nv "${trojango_link}" -O trojan-go.zip
