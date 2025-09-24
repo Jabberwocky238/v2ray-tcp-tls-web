@@ -3,6 +3,8 @@ export LC_ALL=C
 export LANG=en_US
 export LANGUAGE=en_US.UTF-8
 
+# bash <(curl -sL https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/master/install.sh) && v2script
+
 branch="master"
 VERSION="1.4.0"
 
