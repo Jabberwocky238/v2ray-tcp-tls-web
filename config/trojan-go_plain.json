@@ -4,15 +4,24 @@
   "local_port": 3567,
   "remote_addr": "1.1.1.1",
   "remote_port": 80,
-  "log_level": 3,
-  "password": [
-    "FAKETROJANPWD"
-  ],
+  "log_level": 1,
+  "password": [],
   "transport_plugin": {
     "enabled": true,
     "type": "plaintext"
   },
   "router": {
     "enabled": false
+  },
+  "http": {
+    "enabled": true,
+    "api_url": "https://app.enzyme.cloud/api/proxy/auth",
+    "timeout": 5
+  },
+  "api": {
+    "enabled": true,
+    "api_key": "Ae7RAuFZ8LzgAe7RAuFZ8LzgFUCKERSHITCO!@#!@#DDSSsdasdRTEX",
+    "api_addr": "0.0.0.0",
+    "api_port": 39997
   }
 }
