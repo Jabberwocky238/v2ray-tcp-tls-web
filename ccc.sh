@@ -437,6 +437,7 @@ get_hysteria2() {
 }
 
 install_trojan() {
+    apt install -y jq
   while true; do
     read -rp "解析到本 VPS 的域名: " TJ_DOMAIN
     if [[ $(read_json /usr/local/etc/v2script/config.json '.v2ray.tlsHeader') == "${TJ_DOMAIN}" ]] || [[ $(read_json /usr/local/etc/v2script/config.json '.sub.api.tlsHeader') == "${TJ_DOMAIN}" ]]; then
