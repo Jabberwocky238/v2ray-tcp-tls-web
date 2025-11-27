@@ -420,17 +420,20 @@ get_trojan() {
 
 
 get_hysteria2() {
-  if [ ! -f "/usr/local/bin/hysteria2" ]; then
-    colorEcho ${BLUE} "hysteria2 is not installed. start installation"
-    ${sudoCmd} curl -fsSL https://download.hysteria.network/app/latest/hysteria-linux-amd64 -o /usr/local/bin/hysteria2
-    ${sudoCmd} chmod +x /usr/local/bin/hysteria2
-    wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/${branch}/config/hysteria2.service -O /etc/systemd/system/hysteria2.service
-    wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/${branch}/config/hysteria2.yml -O /etc/hysteria2/config.yml
-  else
-    colorEcho ${BLUE} "Getting the latest version of hysteria2"
-    ${sudoCmd} curl -fsSL https://download.hysteria.network/app/latest/hysteria-linux-amd64 -o /usr/local/bin/hysteria2
-    ${sudoCmd} chmod +x /usr/local/bin/hysteria2
-  fi
+  colorEcho ${BLUE} "hysteria2 is not installed. start installation"
+  
+  # 创建必要的目录
+  ${sudoCmd} mkdir -p /etc/hysteria2
+  
+  # 下载 hysteria2 二进制文件
+  ${sudoCmd} curl -fsSL https://download.hysteria.network/app/latest/hysteria-linux-amd64 -o /usr/bin/hysteria2
+  ${sudoCmd} chmod +x /usr/bin/hysteria2
+  
+  # 下载服务文件和配置文件
+  ${sudoCmd} wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/master/config/hysteria2.service -O /etc/systemd/system/hysteria2.service
+  ${sudoCmd} wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/master/config/hysteria2.yml -O /etc/hysteria2/config.yml
+  
+  colorEcho ${GREEN} "hysteria2 installation completed."
 }
 
 install_trojan() {
@@ -468,8 +471,6 @@ install_trojan() {
     ${sudoCmd} /bin/cp -f /tmp/trojan-go.json /etc/trojan-go/config.json
   fi
 
-#   
-
   get_proxy
 
   colorEcho ${BLUE} "Setting tls-shunt-proxy"
@@ -489,15 +490,7 @@ install_trojan() {
   ${sudoCmd} systemctl daemon-reload
   ${sudoCmd} systemctl reset-failed
 
-  colorEcho ${GREEN} "安装 trojan-go 成功!"
-
-  local uuid_trojan="$(read_json /etc/trojan-go/config.json '.password[0]')"
-  local uri_trojan="${uuid_trojan}@${TJ_DOMAIN}:443?peer=${TJ_DOMAIN}&sni=${TJ_DOMAIN}#$(urlEncode "${TJ_DOMAIN}")"
-  write_json /usr/local/etc/v2script/config.json '.sub.nodesList.trojan' "$(printf %s "\"trojan://${uri_trojan}\"")"
-
-  printf '%s\n\n' "trojan://${uri_trojan}"
-
-  subscription_prompt
+  colorEcho ${GREEN} "安装 trojan-go 和 hysteria2 成功!"
 }
 
 install_trojan
