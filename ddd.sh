@@ -194,7 +194,7 @@ step5_start_hysteria2() {
   ${sudoCmd} systemctl daemon-reload
   ${sudoCmd} systemctl enable hysteria2
   ${sudoCmd} systemctl restart hysteria2
-  iptables -t nat -A PREROUTING -i eth0 -p udp --dport 10000:30000 -j REDIRECT --to-ports 443
+  ${sudoCmd} iptables -t nat -A PREROUTING -i eth0 -p udp --dport 10000:30000 -j REDIRECT --to-ports 443
   # 检查状态
   sleep 2
   if ${sudoCmd} systemctl is-active --quiet hysteria2; then
