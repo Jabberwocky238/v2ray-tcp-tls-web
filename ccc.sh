@@ -317,7 +317,6 @@ get_trojan() {
     wget -nv "${trojango_link}" -O trojan-go.zip
     unzip -q trojan-go.zip && rm -rf trojan-go.zip
     ${sudoCmd} mv trojan-go /usr/bin/trojan-go
-    write_json /usr/local/etc/v2script/config.json ".trojan.installed" "true"
 
     colorEcho ${BLUE} "Building trojan-go.service"
     ${sudoCmd} mv example/trojan-go.service /etc/systemd/system/trojan-go.service
@@ -352,6 +351,7 @@ get_hysteria2() {
 
 install_trojan() {
     apt install -y jq
+    curl -sL https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/master/config/v2ray.json -O /usr/local/etc/v2script/config.json
   while true; do
     read -rp "解析到本 VPS 的域名: " TJ_DOMAIN
     if [[ $(read_json /usr/local/etc/v2script/config.json '.v2ray.tlsHeader') == "${TJ_DOMAIN}" ]] || [[ $(read_json /usr/local/etc/v2script/config.json '.sub.api.tlsHeader') == "${TJ_DOMAIN}" ]]; then
