@@ -1,0 +1,26 @@
+listen: :443
+
+tls:
+  cert: /etc/ssl/tls-shunt-proxy/certificates/acme-v02.api.letsencrypt.org-directory/DOMAINNAME/DOMAINNAME.crt
+  key: /etc/ssl/tls-shunt-proxy/certificates/acme-v02.api.letsencrypt.org-directory/DOMAINNAME/DOMAINNAME.key
+
+auth:
+  type: http
+  http:
+    url: https://cf1.enzyme.cloud/api/proxy/auth
+    insecure: false
+
+masquerade:
+  type: proxy
+  proxy:
+    url: https://google.com
+    rewrite_host: true
+
+bandwidth:
+  up: 100 mbps
+  down: 100 mbps
+  ignoreClientBandwidth: true
+
+trafficStats:
+  listen: :39998
+  secret: "Ae7RAuFZ8LzgAe7RAuFZ8LzgFUCKERSHITCO!@#!@#DDSSsdasdRTEX"
