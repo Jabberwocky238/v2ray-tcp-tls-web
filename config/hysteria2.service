@@ -3,10 +3,8 @@ Description=Hysteria2 - An unidentifiable mechanism that helps you bypass GFW
 After=network.target nss-lookup.target
 
 [Service]
-User=nobody
-CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
-AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
-NoNewPrivileges=true
+Type=simple
+User=root
 ExecStart=/usr/bin/hysteria2 server -c /etc/hysteria2/config.yml
 Restart=on-failure
 RestartSec=10s
