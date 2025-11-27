@@ -247,7 +247,7 @@ get_proxy() {
 
 set_proxy() {
   ${sudoCmd} /bin/cp /etc/tls-shunt-proxy/config.yaml /etc/tls-shunt-proxy/config.yaml.bak 2>/dev/null
-  wget -q https://raw.githubusercontent.com/phlinhng/v2ray-tcp-tls-web/${branch}/config/tls-shunt-proxy.yaml -O /tmp/config_new.yaml
+  wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/master/config/tls-shunt-proxy.yaml -O /tmp/config_new.yaml
 
   if [[ $(read_json /usr/local/etc/v2script/config.json '.v2ray.installed') == "true" ]]; then
     sed -i "s/FAKEV2DOMAIN/$(read_json /usr/local/etc/v2script/config.json '.v2ray.tlsHeader')/g" /tmp/config_new.yaml
@@ -301,65 +301,8 @@ checkIP() {
   fi
 }
 
-set_v2ray_wss() {
-  if [[ $(read_json /usr/local/etc/v2script/config.json '.v2ray.cloudflare') != "true" ]]; then
-    local uuid_wss="$(cat '/proc/sys/kernel/random/uuid')"
-    local wssPath="$(cat '/proc/sys/kernel/random/uuid' | sed -e 's/-//g' | tr '[:upper:]' '[:lower:]' | head -c 12)"
-    local sni="$(read_json /usr/local/etc/v2script/config.json '.v2ray.tlsHeader')"
-    local wssInbound="{\"protocol\": \"vmess\",
-  \"port\": 3566,
-  \"settings\": {
-    \"clients\": [{
-      \"id\": \"${uuid_wss}\",
-      \"alterId\": 2
-      }]
-    },
-  \"streamSettings\": {
-      \"network\": \"ws\",
-      \"wsSettings\": {
-        \"path\": \"/${wssPath}\"
-      }
-    },
-    \"sniffing\": {
-      \"enabled\": true,
-      \"destOverride\": [ \"http\", \"tls\" ]
-    }
-  }"
-
-    # setting v2ray
-    ${sudoCmd} /bin/cp /usr/local/etc/v2ray/config.json /usr/local/etc/v2ray/config.json.bak 2>/dev/null
-    jq -r ".inbounds += [${wssInbound}]" /usr/local/etc/v2ray/config.json  > tmp.$$.json && ${sudoCmd} mv tmp.$$.json /usr/local/etc/v2ray/config.json
-    write_json /usr/local/etc/v2script/config.json '.v2ray.cloudflare' "true"
-
-    set_proxy
-
-    ${sudoCmd} systemctl restart v2ray 2>/dev/null
-    ${sudoCmd} systemctl restart tls-shunt-proxy 2>/dev/null
-    ${sudoCmd} systemctl daemon-reload
-
-    colorEcho ${GREEN} "设置CDN成功!"
-    #local cfUrl="www.digitalocean.com"
-    local cfUrl="amp.cloudflare.com"
-    local uuid_wss="$(read_json /usr/local/etc/v2ray/config.json '.inbounds[1].settings.clients[0].id')"
-    local currentRemark="$(read_json /usr/local/etc/v2script/config.json '.sub.nodesList.tcp' | sed 's/^vmess:\/\///g' | base64 -d | jq --raw-output '.ps' | tr -d '\n')"
-    local json_wss="{\"add\":\"${cfUrl}\",\"aid\":\"1\",\"host\":\"${sni}\",\"id\":\"${uuid_wss}\",\"net\":\"ws\",\"path\":\"/${wssPath}\",\"port\":\"443\",\"ps\":\"${currentRemark} (CDN)\",\"tls\":\"tls\",\"type\":\"none\",\"v\":\"2\"}"
-    local uri_wss="$(printf %s "${json_wss}" | base64 --wrap=0)"
-
-    echo "${cfUrl}:443"
-    echo "${uuid_wss} (aid: 1)"
-    echo "Header: ${sni}, Path: /${wssPath}" && echo ""
-    echo "vmess://${uri_wss}" | tr -d '\n' && printf "\n"
-    write_json /usr/local/etc/v2script/config.json '.sub.nodesList.wss' "$(printf %s "\"vmess://${uri_wss}\"" | tr -d '\n')"
-
-    subscription_prompt
-  else
-    display_vmess
-  fi
-}
-
 get_trojan() {
-  if [ ! -d "/usr/bin/trojan-go" ]; then
-    colorEcho ${BLUE} "trojan-go is not installed. start installation"
+  colorEcho ${BLUE} "trojan-go is not installed. start installation"
 
     colorEcho ${BLUE} "Getting the latest version of trojan-go"
     #local latest_version="$(curl -s "https://api.github.com/repos/jabberwocky238/trojan-go/releases" | jq '.[0].tag_name' --raw-output)"
@@ -387,35 +330,6 @@ get_trojan() {
     (crontab -l 2>/dev/null; echo "0 7 * * * wget -q https://raw.githubusercontent.com/Loyalsoldier/v2ray-rules-dat/release/geosite.dat -O /usr/bin/geosite.dat >/dev/null >/dev/null") | ${sudoCmd} crontab -
 
     colorEcho ${GREEN} "trojan-go is installed."
-  else
-    colorEcho ${BLUE} "Getting the latest version of trojan-go"
-    local latest_version="$(curl -s "https://api.github.com/repos/jabberwocky238/trojan-go/releases" | jq '.[0].tag_name' --raw-output)"
-    echo "${latest_version}"
-    local trojango_link="https://github.com/jabberwocky238/trojan-go/releases/download/${latest_version}/trojan-go-linux-amd64.zip"
-
-    cd $(mktemp -d)
-    wget -nv "${trojango_link}" -O trojan-go.zip
-    unzip trojan-go.zip
-    ${sudoCmd} mv trojan-go /usr/bin/trojan-go
-
-    # migrate from v0.6.0 to v0.7+
-    if [ -d "/usr/bin/trojan-go" ];then
-      ${sudoCmd} mv /usr/bin/trojan-go/geoip.dat /usr/bin/geoip.dat
-      ${sudoCmd} mv /usr/bin/trojan-go/geosite.dat /usr/bin/geosite.dat
-      ${sudoCmd} rm -rf /usr/bin/trojan-go
-
-      ${sudoCmd} crontab -l | grep -v 'trojan-go/geoip.dat' | ${sudoCmd} crontab -
-      ${sudoCmd} crontab -l | grep -v 'trojan-go/geosite.dat' | ${sudoCmd} crontab -
-
-      (crontab -l 2>/dev/null; echo "0 7 * * * wget -q https://raw.githubusercontent.com/Loyalsoldier/v2ray-rules-dat/release/geoip.dat -O /usr/bin/geoip.dat >/dev/null >/dev/null") | ${sudoCmd} crontab -
-      (crontab -l 2>/dev/null; echo "0 7 * * * wget -q https://raw.githubusercontent.com/Loyalsoldier/v2ray-rules-dat/release/geosite.dat -O /usr/bin/geosite.dat >/dev/null >/dev/null") | ${sudoCmd} crontab -
-
-      ${sudoCmd} mv example/trojan-go.service /etc/systemd/system/trojan-go.service
-      ${sudoCmd} systemctl daemon-reload
-      ${sudoCmd} systemctl enable trojan-go
-      ${sudoCmd} systemctl restart trojan-go
-    fi
-  fi
 }
 
 
@@ -454,8 +368,8 @@ install_trojan() {
       esac
     fi
   done
-  write_json /usr/local/etc/v2script/config.json ".trojan.tlsHeader" "\"${TJ_DOMAIN}\""
 
+  get_proxy
   get_trojan
   get_hysteria2
 
@@ -472,7 +386,7 @@ install_trojan() {
     ${sudoCmd} /bin/cp -f /tmp/trojan-go.json /etc/trojan-go/config.json
   fi
 
-  get_proxy
+  
 
   colorEcho ${BLUE} "Setting tls-shunt-proxy"
   set_proxy
@@ -486,8 +400,8 @@ install_trojan() {
   ${sudoCmd} systemctl restart trojan-go 2>/dev/null ## restart trojan-go to enable new config
   ${sudoCmd} systemctl enable tls-shunt-proxy
   ${sudoCmd} systemctl restart tls-shunt-proxy ## restart tls-shunt-proxy to enable new config
-  #${sudoCmd} systemctl enable caddy
-  #${sudoCmd} systemctl restart caddy
+  ${sudoCmd} systemctl enable hysteria2
+  ${sudoCmd} systemctl restart hysteria2 ## restart hysteria2 to enable new config
   ${sudoCmd} systemctl daemon-reload
   ${sudoCmd} systemctl reset-failed
 
