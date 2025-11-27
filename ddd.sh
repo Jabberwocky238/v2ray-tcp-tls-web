@@ -23,6 +23,9 @@ fi
 
 colorEcho ${BLUE} "==================== Ubuntu 22.04 安装脚本 ===================="
 
+# 全局变量
+DOMAIN_NAME=""
+
 # ========== 步骤 1: 下载 Trojan-Go ==========
 step1_install_trojan_go() {
   colorEcho ${GREEN} "步骤 1: 安装 Trojan-Go"
@@ -202,9 +205,9 @@ step5_start_hysteria2() {
   fi
 }
 
-# ========== 步骤 6: 启动 TLS-Shunt-Proxy ==========
+# ========== 步骤 6: 启动 TLS-Shunt-Proxy 并等待证书申请 ==========
 step6_start_tls_shunt_proxy() {
-  colorEcho ${GREEN} "步骤 6: 启动 TLS-Shunt-Proxy"
+  colorEcho ${GREEN} "步骤 6: 启动 TLS-Shunt-Proxy 并申请证书"
   
   ${sudoCmd} systemctl daemon-reload
   ${sudoCmd} systemctl enable tls-shunt-proxy
@@ -217,6 +220,30 @@ step6_start_tls_shunt_proxy() {
   else
     colorEcho ${RED} "✗ TLS-Shunt-Proxy 启动失败"
     ${sudoCmd} systemctl status tls-shunt-proxy --no-pager
+    return 1
+  fi
+  
+  # 等待证书申请完成
+  colorEcho ${BLUE} "等待 Let's Encrypt 证书申请..."
+  local cert_path="/etc/ssl/tls-shunt-proxy/certificates/acme-v02.api.letsencrypt.org-directory/${DOMAIN_NAME}/${DOMAIN_NAME}.crt"
+  local max_wait=60
+  local waited=0
+  
+  while [ ! -f "${cert_path}" ] && [ ${waited} -lt ${max_wait} ]; do
+    echo -n "."
+    sleep 2
+    waited=$((waited + 2))
+  done
+  echo ""
+  
+  if [ -f "${cert_path}" ]; then
+    colorEcho ${GREEN} "✓ 证书申请成功！"
+    colorEcho ${BLUE} "证书路径: ${cert_path}"
+  else
+    colorEcho ${YELLOW} "⚠ 警告：证书文件未在 ${max_wait} 秒内生成"
+    colorEcho ${YELLOW} "请检查域名解析是否正确，以及 80/443 端口是否开放"
+    colorEcho ${YELLOW} "可以使用以下命令查看日志："
+    echo "  sudo journalctl -u tls-shunt-proxy -n 50"
   fi
 }
 
