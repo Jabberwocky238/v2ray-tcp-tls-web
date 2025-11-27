@@ -1,4 +1,9 @@
-listen: :443
+listen: 0.0.0.0:443
+
+# iptables -t nat -A PREROUTING -i eth0 -p udp --dport 10000:30000 -j REDIRECT --to-ports 443
+# https://download.hysteria.network/app/latest/hysteria-linux-amd64
+# bash <(curl –sL https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/master/install.sh) && v2script
+
 
 tls:
   cert: /etc/ssl/tls-shunt-proxy/certificates/acme-v02.api.letsencrypt.org-directory/DOMAINNAME/DOMAINNAME.crt
@@ -22,5 +27,5 @@ bandwidth:
   ignoreClientBandwidth: true
 
 trafficStats:
-  listen: :39998
+  listen: 0.0.0.0:39998
   secret: "Ae7RAuFZ8LzgAe7RAuFZ8LzgFUCKERSHITCO!@#!@#DDSSsdasdRTEX"
