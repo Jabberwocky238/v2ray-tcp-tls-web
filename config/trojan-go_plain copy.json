@@ -1,0 +1,28 @@
+{
+  "run_type": "server",
+  "local_addr": "0.0.0.0",
+  "local_port": 443,
+  "remote_addr": "127.0.0.1",
+  "remote_port": 80,
+  "log_level": 1,
+  "password": [],
+  "ssl": {
+    "cert": "server.crt",
+    "key": "server.key",
+    "fallback_port": 1234
+  },
+  "router": {
+    "enabled": false
+  },
+  "http": {
+    "enabled": true,
+    "api_url": "https://app.enzyme.cloud/api/proxy/auth",
+    "timeout": 5
+  },
+  "api": {
+    "enabled": true,
+    "api_key": "Ae7RAuFZ8LzgAe7RAuFZ8LzgFUCKERSHITCO!@#!@#DDSSsdasdRTEX",
+    "api_addr": "0.0.0.0",
+    "api_port": 39997
+  }
+}

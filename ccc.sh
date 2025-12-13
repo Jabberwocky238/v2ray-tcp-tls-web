@@ -309,7 +309,7 @@ get_trojan() {
     latest_version="v20250924_033135"
     echo "${latest_version}"
     local trojango_link="https://github.com/jabberwocky238/trojan-go/releases/download/${latest_version}/trojan-go-linux-amd64.zip"
-
+# trojango_link="https://github.com/jabberwocky238/trojan-go/releases/download/v20250924_033135/trojan-go-linux-amd64.zip"
     ${sudoCmd} mkdir -p "/etc/trojan-go"
     #${sudoCmd} mkdir -p "/etc/ssl/trojan--go"
 

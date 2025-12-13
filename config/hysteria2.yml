@@ -4,7 +4,6 @@ listen: 0.0.0.0:443
 # https://download.hysteria.network/app/latest/hysteria-linux-amd64
 # bash <(curl –sL https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/master/install.sh) && v2script
 
-
 tls:
   cert: /etc/ssl/tls-shunt-proxy/certificates/acme-v02.api.letsencrypt.org-directory/DOMAINNAME/DOMAINNAME.crt
   key: /etc/ssl/tls-shunt-proxy/certificates/acme-v02.api.letsencrypt.org-directory/DOMAINNAME/DOMAINNAME.key
@@ -18,7 +17,7 @@ auth:
 masquerade:
   type: proxy
   proxy:
-    url: https://google.com
+    url: https://DOMAINNAME
     rewrite_host: true
 
 bandwidth:
