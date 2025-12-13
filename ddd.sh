@@ -26,49 +26,12 @@ red="\033[0;${RED}"
 green="\033[0;${GREEN}"
 nocolor="\033[0m"
 
-# 检测操作系统
-if [[ -f /etc/redhat-release ]]; then
-  release="centos"
-  systemPackage="yum"
-elif cat /etc/issue | grep -Eqi "debian"; then
-  release="debian"
-  systemPackage="apt-get"
-elif cat /etc/issue | grep -Eqi "ubuntu"; then
-  release="ubuntu"
-  systemPackage="apt-get"
-elif cat /etc/issue | grep -Eqi "centos|red hat|redhat"; then
-  release="centos"
-  systemPackage="yum"
-elif cat /proc/version | grep -Eqi "debian"; then
-  release="debian"
-  systemPackage="apt-get"
-elif cat /proc/version | grep -Eqi "ubuntu"; then
-  release="ubuntu"
-  systemPackage="apt-get"
-elif cat /proc/version | grep -Eqi "centos|red hat|redhat"; then
-  release="centos"
-  systemPackage="yum"
-fi
-
-# 检查并安装必要的工具
-check_dependencies() {
-  if ! command -v jq &> /dev/null; then
-    colorEcho ${BLUE} "jq 未安装，正在安装..."
-    ${sudoCmd} ${systemPackage} install jq -y -qq
-    colorEcho ${GREEN} "jq 安装完成"
-  fi
-  
-  if ! command -v curl &> /dev/null; then
-    colorEcho ${BLUE} "curl 未安装，正在安装..."
-    ${sudoCmd} ${systemPackage} install curl -y -qq
-    colorEcho ${GREEN} "curl 安装完成"
-  fi
-  
-  if ! command -v wget &> /dev/null; then
-    colorEcho ${BLUE} "wget 未安装，正在安装..."
-    ${sudoCmd} ${systemPackage} install wget -y -qq
-    colorEcho ${GREEN} "wget 安装完成"
-  fi
+# 安装必要的依赖工具
+install_dependencies() {
+  colorEcho ${BLUE} "更新软件包列表并安装依赖..."
+  ${sudoCmd} apt update -qq
+  ${sudoCmd} apt install -y curl wget jq unzip
+  colorEcho ${GREEN} "依赖安装完成"
 }
 
 urlEncode() {
@@ -95,7 +58,7 @@ set_proxy() {
   # 直接创建配置文件，强制使用指定的配置
   ${sudoCmd} cat > /etc/tls-shunt-proxy/config.yaml <<-EOF
 listen: 0.0.0.0:443
-redirecthttps: true
+redirecthttps: 0.0.0.0:80
 inboundbuffersize: 4
 outboundbuffersize: 32
 vhosts:
@@ -243,9 +206,12 @@ install_hysteria2() {
   ${sudoCmd} bash <(curl -fsSL https://get.hy2.sh/)
 
   # 下载并配置 hysteria2
-  ${sudoCmd} rm -f /etc/hysteria/config.yml
-  ${sudoCmd} wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/${branch}/config/hysteria2.yml -O /etc/hysteria/config.yml
-  ${sudoCmd} sed -i "s/DOMAINNAME/${TJ_DOMAIN}/g" /etc/hysteria/config.yml
+  ${sudoCmd} rm -f /etc/hysteria/config.yaml
+  ${sudoCmd} wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/${branch}/config/hysteria2.yaml -O /etc/hysteria/config.yaml
+  ${sudoCmd} sed -i "s/DOMAINNAME/${TJ_DOMAIN}/g" /etc/hysteria/config.yaml
+  # 修改service文件，使其可以读取配置文件
+  ${sudoCmd} sed -i "s/CapabilityBoundingSet=/CapabilityBoundingSet=CAP_DAC_READ_SEARCH /g" /etc/systemd/system/hysteria-server.service
+  ${sudoCmd} sed -i "s/AmbientCapabilities=/AmbientCapabilities=CAP_DAC_READ_SEARCH /g" /etc/systemd/system/hysteria-server.service
 
   echo ""
   colorEcho ${BLUE} "请手动执行以下命令配置防火墙:"
@@ -276,9 +242,10 @@ main() {
   colorEcho ${BLUE} "=========================================="
   echo ""
   
-  # 检查并安装依赖工具
-  check_dependencies
-  
+  # 安装依赖工具
+  install_dependencies
+  sudo sysctl -w net.ipv4.ip_forward=1
+
   # 安装 trojan
   install_trojan
   
