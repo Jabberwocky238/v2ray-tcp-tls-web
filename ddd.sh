@@ -51,6 +51,74 @@ elif cat /proc/version | grep -Eqi "centos|red hat|redhat"; then
   systemPackage="yum"
 fi
 
+# 检查并安装必要的工具
+check_dependencies() {
+  # 检查 jq 是否安装
+  if ! command -v jq &> /dev/null; then
+    colorEcho ${BLUE} "jq 未安装，正在安装..."
+    ${sudoCmd} ${systemPackage} install jq -y -qq
+    colorEcho ${GREEN} "jq 安装完成"
+  fi
+  
+  # 检查 curl 是否安装
+  if ! command -v curl &> /dev/null; then
+    colorEcho ${BLUE} "curl 未安装，正在安装..."
+    ${sudoCmd} ${systemPackage} install curl -y -qq
+    colorEcho ${GREEN} "curl 安装完成"
+  fi
+  
+  # 检查 wget 是否安装
+  if ! command -v wget &> /dev/null; then
+    colorEcho ${BLUE} "wget 未安装，正在安装..."
+    ${sudoCmd} ${systemPackage} install wget -y -qq
+    colorEcho ${GREEN} "wget 安装完成"
+  fi
+}
+
+# 初始化配置文件
+init_config() {
+  if [ ! -d "/usr/local/etc/v2script" ]; then
+    ${sudoCmd} mkdir -p /usr/local/etc/v2script
+  fi
+  
+  if [ ! -f "/usr/local/etc/v2script/config.json" ]; then
+    colorEcho ${BLUE} "初始化配置文件..."
+    ${sudoCmd} cat > /usr/local/etc/v2script/config.json <<-EOF
+{
+  "version": "1.0.0",
+  "v2ray": {
+    "installed": false,
+    "tlsHeader": "",
+    "cloudflare": false
+  },
+  "trojan": {
+    "installed": false,
+    "tlsHeader": ""
+  },
+  "sub": {
+    "enabled": false,
+    "uri": "",
+    "api": {
+      "installed": false,
+      "tlsHeader": ""
+    },
+    "nodesList": {
+      "tcp": "",
+      "wss": "",
+      "trojan": ""
+    }
+  },
+  "mtproto": {
+    "installed": false,
+    "fakeTlsHeader": "",
+    "secret": ""
+  }
+}
+EOF
+    colorEcho ${GREEN} "配置文件已创建"
+  fi
+}
+
 VERSION="$(${sudoCmd} jq --raw-output '.version' /usr/local/etc/v2script/config.json 2>/dev/null | tr -d '\n')"
 
 read_json() {
@@ -308,7 +376,6 @@ get_trojan() {
     wget -nv "${trojango_link}" -O trojan-go.zip
     unzip -q trojan-go.zip && rm -rf trojan-go.zip
     ${sudoCmd} mv trojan-go /usr/bin/trojan-go
-    write_json /usr/local/etc/v2script/config.json ".trojan.installed" "true"
 
     colorEcho ${BLUE} "Building trojan-go.service"
     ${sudoCmd} mv example/trojan-go.service /etc/systemd/system/trojan-go.service
@@ -354,31 +421,38 @@ get_trojan() {
 
 
 install_hysteria2() {
+  # 从配置文件读取 trojan 域名
+  local TJ_DOMAIN="$(read_json /usr/local/etc/v2script/config.json '.trojan.tlsHeader')"
+  
+  # 确认域名存在
+  if [ -z "${TJ_DOMAIN}" ]; then
+    colorEcho ${RED} "未找到 Trojan 域名配置, 请先安装 Trojan"
+    return 1
+  fi
+  
+  colorEcho ${BLUE} "使用域名: ${TJ_DOMAIN}"
+  
   export HYSTERIA_USER=root
   ${sudoCmd} bash <(curl -fsSL https://get.hy2.sh/)
 
   # 替换配置文件
   ${sudoCmd} rm -f /etc/hysteria/config.yml
   ${sudoCmd} wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/${branch}/config/hysteria2.yml -O /etc/hysteria/config.yml
-  # 确认域名环境变量存在
-  if [ -z "${TJ_DOMAIN}" ]; then
-    colorEcho ${RED} "域名 ${TJ_DOMAIN} 不存在, 请重新输入"
-    return 1
-  fi
   ${sudoCmd} sed -i "s/DOMAINNAME/${TJ_DOMAIN}/g" /etc/hysteria/config.yml
 
-  colorEcho ${BLUE} "请手动执行以下命令:
-  ifconfig
-  iptables -t nat -A PREROUTING -i eth0 -p udp --dport 10000:30000 -j REDIRECT --to-ports 443
-  "
+  colorEcho ${BLUE} "请手动执行以下命令:"
+  colorEcho ${YELLOW} "  ifconfig"
+  colorEcho ${YELLOW} "  iptables -t nat -A PREROUTING -i eth0 -p udp --dport 10000:30000 -j REDIRECT --to-ports 443"
 
   # 检查证书是否存在
-  if [ ! -f "/etc/ssl/tls-shunt-proxy/certificates/acme-v02.api.letsencrypt.org-directory/${TJ_DOMAIN}/${TJ_DOMAIN}.crt" ]; then
-    # 如果不存在，打印提示信息，并等待3s
-    colorEcho ${RED} "证书 ${TJ_DOMAIN} 不存在, 等待3s后重新检查"
-    sleep 3
-    return 1
+  local cert_path="/etc/ssl/tls-shunt-proxy/certificates/acme-v02.api.letsencrypt.org-directory/${TJ_DOMAIN}/${TJ_DOMAIN}.crt"
+  if [ ! -f "${cert_path}" ]; then
+    colorEcho ${RED} "证书 ${cert_path} 不存在"
+    colorEcho ${YELLOW} "证书会在 trojan-go 首次运行时自动申请"
+    colorEcho ${YELLOW} "请等待证书申请完成后，手动重启 hysteria-server: systemctl restart hysteria-server"
+    return 0
   fi
+  
   ${sudoCmd} systemctl enable hysteria-server
   ${sudoCmd} systemctl restart hysteria-server
 
@@ -435,14 +509,21 @@ install_trojan() {
 
   colorEcho ${GREEN} "安装 trojan-go 成功!"
 
+  # 标记 trojan 为已安装
+  write_json /usr/local/etc/v2script/config.json '.trojan.installed' "true"
+
   local uuid_trojan="$(read_json /etc/trojan-go/config.json '.password[0]')"
   local uri_trojan="${uuid_trojan}@${TJ_DOMAIN}:443?peer=${TJ_DOMAIN}&sni=${TJ_DOMAIN}#$(urlEncode "${TJ_DOMAIN}")"
   write_json /usr/local/etc/v2script/config.json '.sub.nodesList.trojan' "$(printf %s "\"trojan://${uri_trojan}\"")"
 
   printf '%s\n\n' "trojan://${uri_trojan}"
-
-  subscription_prompt
 }
+
+# 检查并安装依赖工具
+check_dependencies
+
+# 初始化配置文件
+init_config
 
 # 直接执行 install_trojan 函数
 install_trojan
