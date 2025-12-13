@@ -237,7 +237,7 @@ get_proxy() {
 
 set_proxy() {
   ${sudoCmd} /bin/cp /etc/tls-shunt-proxy/config.yaml /etc/tls-shunt-proxy/config.yaml.bak 2>/dev/null
-  wget -q https://raw.githubusercontent.com/phlinhng/v2ray-tcp-tls-web/${branch}/config/tls-shunt-proxy.yaml -O /tmp/config_new.yaml
+  wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/${branch}/config/tls-shunt-proxy.yaml -O /tmp/config_new.yaml
 
   if [[ $(read_json /usr/local/etc/v2script/config.json '.v2ray.installed') == "true" ]]; then
     sed -i "s/FAKEV2DOMAIN/$(read_json /usr/local/etc/v2script/config.json '.v2ray.tlsHeader')/g" /tmp/config_new.yaml
@@ -274,14 +274,14 @@ build_web() {
     wget -q https://raw.githubusercontent.com/phlinhng/web-templates/master/${template} -O /tmp/template.zip
     ${sudoCmd} mkdir -p /var/www/html
     ${sudoCmd} unzip -q /tmp/template.zip -d /var/www/html
-    ${sudoCmd} wget -q https://raw.githubusercontent.com/phlinhng/v2ray-tcp-tls-web/${branch}/custom/robots.txt -O /var/www/html/robots.txt
+    ${sudoCmd} wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/${branch}/custom/robots.txt -O /var/www/html/robots.txt
   else
     echo "Dummy website existed. Skip building."
   fi
 }
 
 checkIP() {
-  local realIP="$(curl -s `curl -s https://raw.githubusercontent.com/phlinhng/v2ray-tcp-tls-web/master/custom/ip_api`)"
+  local realIP="$(curl -s `curl -s https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/master/custom/ip_api`)"
   local resolvedIP="$(ping $1 -c 1 | head -n 1 | grep  -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)"
 
   if [[ "${realIP}" == "${resolvedIP}" ]]; then
@@ -359,7 +359,7 @@ install_hysteria2() {
 
   # 替换配置文件
   ${sudoCmd} rm -f /etc/hysteria/config.yml
-  ${sudoCmd} wget -q https://raw.githubusercontent.com/phlinhng/v2ray-tcp-tls-web/${branch}/config/hysteria2.yml -O /etc/hysteria/config.yml
+  ${sudoCmd} wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/${branch}/config/hysteria2.yml -O /etc/hysteria/config.yml
   # 确认域名环境变量存在
   if [ -z "${TJ_DOMAIN}" ]; then
     colorEcho ${RED} "域名 ${TJ_DOMAIN} 不存在, 请重新输入"
@@ -368,9 +368,17 @@ install_hysteria2() {
   ${sudoCmd} sed -i "s/DOMAINNAME/${TJ_DOMAIN}/g" /etc/hysteria/config.yml
 
   colorEcho ${BLUE} "请手动执行以下命令:
+  ifconfig
   iptables -t nat -A PREROUTING -i eth0 -p udp --dport 10000:30000 -j REDIRECT --to-ports 443
   "
 
+  # 检查证书是否存在
+  if [ ! -f "/etc/ssl/tls-shunt-proxy/certificates/acme-v02.api.letsencrypt.org-directory/${TJ_DOMAIN}/${TJ_DOMAIN}.crt" ]; then
+    # 如果不存在，打印提示信息，并等待3s
+    colorEcho ${RED} "证书 ${TJ_DOMAIN} 不存在, 等待3s后重新检查"
+    sleep 3
+    return 1
+  fi
   ${sudoCmd} systemctl enable hysteria-server
   ${sudoCmd} systemctl restart hysteria-server
 
@@ -401,7 +409,7 @@ install_trojan() {
   # create config files
   if [ ! -f "/etc/trojan-go/config.json" ]; then
     colorEcho ${BLUE} "Setting trojan-go"
-    wget -q https://raw.githubusercontent.com/phlinhng/v2ray-tcp-tls-web/${branch}/config/trojan-go_plain.json -O /tmp/trojan-go.json
+    wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/${branch}/config/trojan-go_plain.json -O /tmp/trojan-go.json
     sed -i "s/FAKETROJANPWD/$(cat '/proc/sys/kernel/random/uuid' | sed -e 's/-//g' | tr '[:upper:]' '[:lower:]' | head -c 12)/g" /tmp/trojan-go.json
     ${sudoCmd} /bin/cp -f /tmp/trojan-go.json /etc/trojan-go/config.json
   fi
@@ -439,3 +447,4 @@ install_trojan() {
 # 直接执行 install_trojan 函数
 install_trojan
 install_hysteria2
+
