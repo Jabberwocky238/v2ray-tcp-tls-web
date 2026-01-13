@@ -331,24 +331,6 @@ get_trojan() {
     colorEcho ${GREEN} "trojan-go is installed."
 }
 
-
-get_hysteria2() {
-  colorEcho ${BLUE} "hysteria2 is not installed. start installation"
-  
-  # 创建必要的目录
-  ${sudoCmd} mkdir -p /etc/hysteria2
-  
-  # 下载 hysteria2 二进制文件
-  ${sudoCmd} curl -fsSL https://download.hysteria.network/app/latest/hysteria-linux-amd64 -o /usr/bin/hysteria2
-  ${sudoCmd} chmod +x /usr/bin/hysteria2
-  
-  # 下载服务文件和配置文件
-  ${sudoCmd} wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/master/config/hysteria2.service -O /etc/systemd/system/hysteria2.service
-  ${sudoCmd} wget -q https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/master/config/hysteria2.yml -O /etc/hysteria2/config.yml
-  
-  colorEcho ${GREEN} "hysteria2 installation completed."
-}
-
 install_trojan() {
     apt install -y jq
     curl -sL https://raw.githubusercontent.com/jabberwocky238/v2ray-tcp-tls-web/master/config/v2ray.json -O /usr/local/etc/v2script/config.json
@@ -371,12 +353,6 @@ install_trojan() {
 
   get_proxy
   get_trojan
-  get_hysteria2
-
-    # 如果存在 hysteria.yml 配置文件，替换域名
-  if [ -f "/etc/hysteria2/config.yml" ]; then
-    ${sudoCmd} sed -i "s/DOMAINNAME/${TJ_DOMAIN}/g" /etc/hysteria2/config.yml
-  fi
 
   # create config files
   if [ ! -f "/etc/trojan-go/config.json" ]; then
@@ -400,8 +376,6 @@ install_trojan() {
   ${sudoCmd} systemctl restart trojan-go 2>/dev/null ## restart trojan-go to enable new config
   ${sudoCmd} systemctl enable tls-shunt-proxy
   ${sudoCmd} systemctl restart tls-shunt-proxy ## restart tls-shunt-proxy to enable new config
-  ${sudoCmd} systemctl enable hysteria2
-  ${sudoCmd} systemctl restart hysteria2 ## restart hysteria2 to enable new config
   ${sudoCmd} systemctl daemon-reload
   ${sudoCmd} systemctl reset-failed
 
